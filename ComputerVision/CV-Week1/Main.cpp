@@ -1,6 +1,10 @@
-#include <iostream>
 
-int main()
+
+#include "ExampleA.h"
+
+
+
+int main(int argc, char** argv)
 {
-    std::cout << "Hello World!\n"; 
+	runExampleA(argc, argv);
 }
