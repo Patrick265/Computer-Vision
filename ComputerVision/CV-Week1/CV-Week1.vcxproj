@@ -162,9 +162,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ExampleA.cpp" />
+    <ClCompile Include="ExampleB.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ExampleB.h" />
     <ClInclude Include="ExampleA.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

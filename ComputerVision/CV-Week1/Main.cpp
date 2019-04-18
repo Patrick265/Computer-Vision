@@ -1,10 +1,10 @@
 
 
 #include "ExampleA.h"
-
+#include "ExampleB.h"
 
 
 int main(int argc, char** argv)
 {
-	runExampleA(argc, argv);
+	runExampleB(argc, argv);
 }
