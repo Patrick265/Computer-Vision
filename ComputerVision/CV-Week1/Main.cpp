@@ -2,9 +2,10 @@
 
 #include "ExampleA.h"
 #include "ExampleB.h"
+#include "ExampleC.h"
 
 
 int main(int argc, char** argv)
 {
-	runExampleB(argc, argv);
+	runExampleC(argc, argv);
 }
