@@ -161,17 +161,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="blobdetectionavans.cpp" />
     <ClCompile Include="ExampleA.cpp" />
     <ClCompile Include="ExampleB.cpp" />
     <ClCompile Include="ExampleC.cpp" />
     <ClCompile Include="ExampleD.cpp" />
+    <ClCompile Include="ExampleE.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="blobdetectionavans.h" />
     <ClInclude Include="ExampleB.h" />
     <ClInclude Include="ExampleA.h" />
     <ClInclude Include="ExampleC.h" />
     <ClInclude Include="ExampleD.h" />
+    <ClInclude Include="ExampleE.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

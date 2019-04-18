@@ -4,9 +4,10 @@
 #include "ExampleB.h"
 #include "ExampleC.h"
 #include "ExampleD.h"
+#include "ExampleE.h"
 
 
 int main(int argc, char** argv)
 {
-	runExampleD(argc, argv);
+	runExampleE(argc, argv);
 }
