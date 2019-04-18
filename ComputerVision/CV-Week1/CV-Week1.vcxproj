@@ -164,12 +164,14 @@
     <ClCompile Include="ExampleA.cpp" />
     <ClCompile Include="ExampleB.cpp" />
     <ClCompile Include="ExampleC.cpp" />
+    <ClCompile Include="ExampleD.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ExampleB.h" />
     <ClInclude Include="ExampleA.h" />
     <ClInclude Include="ExampleC.h" />
+    <ClInclude Include="ExampleD.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
