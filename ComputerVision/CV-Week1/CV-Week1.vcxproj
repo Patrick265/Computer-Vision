@@ -161,6 +161,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Application1.cpp" />
     <ClCompile Include="blobdetectionavans.cpp" />
     <ClCompile Include="ExampleA.cpp" />
     <ClCompile Include="ExampleB.cpp" />
@@ -170,6 +171,7 @@
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Application1.h" />
     <ClInclude Include="blobdetectionavans.h" />
     <ClInclude Include="ExampleB.h" />
     <ClInclude Include="ExampleA.h" />

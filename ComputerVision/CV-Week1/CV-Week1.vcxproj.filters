@@ -36,6 +36,9 @@
     <ClCompile Include="blobdetectionavans.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Application1.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ExampleA.h">
@@ -54,6 +57,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="blobdetectionavans.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Application1.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
