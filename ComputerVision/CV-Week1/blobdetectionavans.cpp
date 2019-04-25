@@ -156,6 +156,7 @@ void setEntryImage(Mat m, int i, int j, _int16 value) {
 	int index = i * m.cols + j;
 	_int16 * p = m.ptr<_int16>(0);
 	p[index] = value;
+	
 } //  setEntry
 
   // pre: (i < m.rows) & (j < m.cols)
