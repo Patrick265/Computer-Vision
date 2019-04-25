@@ -1,2 +1,2 @@
 
-int runApplication1(int argc, char** argv);
+void runApplication1(int argc, char** argv);
