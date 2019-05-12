@@ -54,7 +54,6 @@ int main(int argc, char** argv)
 						break;
 				}
 				//Showing frame in a window
-
 				imshow("Computer Vision Week 2", videoFrame);
 				showThresholdImage();
 				
