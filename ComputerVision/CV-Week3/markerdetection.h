@@ -1,0 +1,3 @@
+
+//Global functions
+int runMarkerDetection();
