@@ -23,9 +23,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BlobSearcher.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="markerdetection.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
