@@ -138,18 +138,25 @@ int main(int argc, char** argv)
 		std::vector<cv::Vec4i> hierarchy;
 		cv::findContours(hsv, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
 		size_t largestContour = 0;
+		size_t secondContour = 0;
 		for (size_t i = 1; i < contours.size(); i++)
 		{
-			if (cv::contourArea(contours[i]) > cv::contourArea(contours[largestContour]))
+			if (cv::contourArea(contours[i]) > cv::contourArea(contours[secondContour])) {
+				secondContour = largestContour;
 				largestContour = i;
+				
+			}
 		}
+		std::cout << "largest: " << largestContour << " second: " << secondContour << std::endl;
 		cv::drawContours(frame, contours, largestContour, cv::Scalar(0, 0, 255), 1);
+		cv::drawContours(frame, contours, secondContour, cv::Scalar(0, 0, 255), 1);
 		// Convex hull
 		if (!contours.empty())
 		{
 			std::vector<std::vector<cv::Point> > hull(1);
 			cv::convexHull(cv::Mat(contours[largestContour]), hull[0], false);
 			cv::drawContours(frame, hull, 0, cv::Scalar(0, 255, 0), 3);
+			//std::cout << "hull size: " << hull.size() << std::endl;
 			if (hull[0].size() > 2)
 			{
 				std::vector<int> hullIndexes;
@@ -177,7 +184,41 @@ int main(int argc, char** argv)
 				{
 					cv::circle(frame, validPoints[i], 9, cv::Scalar(0, 255, 0), 2);
 				}
-				std::cout << "amount off fingies: " << validPoints.size()+1 << std::endl;
+				//std::cout << "amount off fingies handie onie: " << validPoints.size() << std::endl;
+			}
+
+			std::vector<std::vector<cv::Point> > hullSec(1);
+			cv::convexHull(cv::Mat(contours[secondContour]), hullSec[0], false);
+			cv::drawContours(frame, hullSec, 0, cv::Scalar(0, 255, 0), 3);
+			//std::cout << "hull size: " << hullSec.size() << std::endl;
+			if (hullSec[0].size() > 2)
+			{
+				std::vector<int> hullIndexes;
+				cv::convexHull(cv::Mat(contours[secondContour]), hullIndexes, true);
+				std::vector<cv::Vec4i> convexityDefects;
+				cv::convexityDefects(cv::Mat(contours[secondContour]), hullIndexes, convexityDefects);
+				cv::Rect boundingBox = cv::boundingRect(hullSec[0]);
+				cv::rectangle(frame, boundingBox, cv::Scalar(255, 0, 0));
+				cv::Point center = cv::Point(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
+				std::vector<cv::Point> validPoints;
+				for (size_t i = 0; i < convexityDefects.size(); i++)
+				{
+					cv::Point p1 = contours[secondContour][convexityDefects[i][0]];
+					cv::Point p2 = contours[secondContour][convexityDefects[i][1]];
+					cv::Point p3 = contours[secondContour][convexityDefects[i][2]];
+					double angle = std::atan2(center.y - p1.y, center.x - p1.x) * 180 / CV_PI;
+					double inAngle = innerAngle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+					double length = std::sqrt(std::pow(p1.x - p3.x, 2) + std::pow(p1.y - p3.y, 2));
+					if (angle > angleMin - 180 && angle < angleMax - 180 && inAngle > inAngleMin - 180 && inAngle < inAngleMax - 180 && length > lengthMin / 100.0 * boundingBox.height && length < lengthMax / 100.0 * boundingBox.height)
+					{
+						validPoints.push_back(p1);
+					}
+				}
+				for (size_t i = 0; i < validPoints.size(); i++)
+				{
+					cv::circle(frame, validPoints[i], 9, cv::Scalar(0, 255, 0), 2);
+				}
+				//std::cout << "amount off fingies handie secondie: " << validPoints.size() << std::endl;
 			}
 		}
 		cv::imshow(windowName, frame);
