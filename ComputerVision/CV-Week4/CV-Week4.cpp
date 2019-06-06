@@ -5,155 +5,184 @@
 
 #include "BlobSearcher.h"
 
-using namespace cv;
-using namespace std;
-/// Global variables
+int minH = 0, maxH = 20, minS = 30, maxS = 150, minV = 60, maxV = 255;
+cv::Mat frame;
+int count = 0;
 
-void track(int, void*);
-Mat orjinalGoruntu;
-Mat fgMaskMOG2;
-Mat griGoruntu, kirpik, or2, kenarlar, aynali;
-int thresh = 140, maxVal = 255;
-int type = 1, deger = 8;
+float innerAngle(float px1, float py1, float px2, float py2, float cx1, float cy1)
+{
 
+	float dist1 = std::sqrt((px1 - cx1) * (px1 - cx1) + (py1 - cy1) * (py1 - cy1));
+	float dist2 = std::sqrt((px2 - cx1) * (px2 - cx1) + (py2 - cy1) * (py2 - cy1));
+
+	float Ax, Ay;
+	float Bx, By;
+	float Cx, Cy;
+
+	//find closest point to C  
+	//printf("dist = %lf %lf\n", dist1, dist2);  
+
+	Cx = cx1;
+	Cy = cy1;
+	if (dist1 < dist2)
+	{
+		Bx = px1;
+		By = py1;
+		Ax = px2;
+		Ay = py2;
+
+
+	}
+	else {
+		Bx = px2;
+		By = py2;
+		Ax = px1;
+		Ay = py1;
+	}
+
+
+	float Q1 = Cx - Ax;
+	float Q2 = Cy - Ay;
+	float P1 = Bx - Ax;
+	float P2 = By - Ay;
+
+
+	float A = std::acos((P1 * Q1 + P2 * Q2) / (std::sqrt(P1 * P1 + P2 * P2) * std::sqrt(Q1 * Q1 + Q2 * Q2)));
+
+	A = A * 180 / CV_PI;
+
+	return A;
+}
+
+void CallbackFunc(int event, int x, int y, int flags, void* userdata)
+{
+	cv::Mat RGB = frame(cv::Rect(x, y, 1, 1));
+	cv::Mat HSV;
+	cv::cvtColor(RGB, HSV, cv::COLOR_BGR2HSV);
+	cv::Vec3b pixel = HSV.at<cv::Vec3b>(0, 0);
+	if (event == cv::EVENT_LBUTTONDBLCLK) // on double left clcik
+	{
+		std::cout << "Click" << std::endl;
+		int h = pixel.val[0];
+		int s = pixel.val[1];
+		int v = pixel.val[2];
+		if (count == 0)
+		{
+			minH = h;
+			maxH = h;
+			minS = s;
+			maxS = s;
+			minV = v;
+			maxV = v;
+		}
+		else
+		{
+			if (h < minH)
+			{
+				minH = h;
+			}
+			else if (h > maxH)
+			{
+				maxH = h;
+			}
+			if (s < minS)
+			{
+				minS = s;
+			}
+			else if (s > maxS)
+			{
+				maxS = s;
+			}
+			if (v < minV)
+			{
+				minV = v;
+			}
+			else if (v > maxV)
+			{
+				maxV = v;
+			}
+
+		}
+		count++;
+	}
+	std::cout << pixel << std::endl;
+}
 
 int main(int argc, char** argv)
 {
-	Ptr< BackgroundSubtractor> pMOG2;
-	pMOG2 = createBackgroundSubtractorMOG2();
-	cv::Rect myRoi(288, 12, 288, 288);
-	Mat element = getStructuringElement(MORPH_RECT, Size(3, 3), Point(1, 1));
-	Mat frame;
-	Mat resizeF;
-	VideoCapture cap;
-	cap.open(0);
+	cv::VideoCapture cap(0);
+	const char* windowName = "Fingertip detection";
+	cv::namedWindow(windowName);
+	cv::setMouseCallback(windowName, CallbackFunc, NULL);
+	int inAngleMin = 200, inAngleMax = 300, angleMin = 180, angleMax = 359, lengthMin = 10, lengthMax = 80;
+	cv::createTrackbar("Inner angle min", windowName, &inAngleMin, 360);
+	cv::createTrackbar("Inner angle max", windowName, &inAngleMax, 360);
+	cv::createTrackbar("Angle min", windowName, &angleMin, 360);
+	cv::createTrackbar("Angle max", windowName, &angleMax, 360);
+	cv::createTrackbar("Length min", windowName, &lengthMin, 100);
+	cv::createTrackbar("Length max", windowName, &lengthMax, 100);
 	while (1)
 	{
-		Mat aynali2;
-		cap >> orjinalGoruntu;
-		cv::flip(orjinalGoruntu, aynali, 1);
-		//cv::rectangle(orjinalGoruntu, cv::Point(300, 300), cv::Point(12, 12), cv::Scalar(0, 0, 255));
-		cv::rectangle(aynali, myRoi, cv::Scalar(0, 0, 255));
-		kirpik = aynali(myRoi);
-		cvtColor(kirpik, griGoruntu, COLOR_RGB2GRAY);
-		//equalizeHist(griGoruntu, griGoruntu);
-		GaussianBlur(griGoruntu, griGoruntu, Size(23, 23), 0); //35,35
-		//threshold(griGoruntu, or2, thresh, maxVal, THRESH_OTSU + CV_THRESH_BINARY_INV);
-		namedWindow("ayarla", WINDOW_AUTOSIZE);
-		createTrackbar("Esik", "ayarla", &thresh, 250, track);
-		createTrackbar("Maksimum", "ayarla", &maxVal, 255, track);
-		createTrackbar("Esik Tipi", "ayarla", &type, 4, track);
-		createTrackbar("Kenarlar", "ayarla", &deger, 100, track);
-		pMOG2->apply(kirpik, fgMaskMOG2);
-		//pMOG2->operator()(kirpik, fgMaskMOG2);
-		cv::rectangle(fgMaskMOG2, myRoi, cv::Scalar(0, 0, 255));
-
-		//cv::flip(fgMaskMOG2, aynali2, 1);
-
-		track(0, 0);
-		imshow("ORJINAL Goruntu", aynali);
-		imshow("ArkaPlan Kaldırıldı", fgMaskMOG2);
-		imshow("Gri", griGoruntu);
-
-
-
-
-		char key = waitKey(24);
-		if (key == 27) break;
+		cap >> frame;
+		cv::Mat hsv;
+		cv::cvtColor(frame, hsv, cv::COLOR_BGR2HSV);
+		cv::inRange(hsv, cv::Scalar(minH, minS, minV), cv::Scalar(maxH, maxS, maxV), hsv);
+		// Pre processing
+		int blurSize = 5;
+		int elementSize = 5;
+		cv::medianBlur(hsv, hsv, blurSize);
+		cv::Mat element = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(2 * elementSize + 1, 2 * elementSize + 1), cv::Point(elementSize, elementSize));
+		cv::dilate(hsv, hsv, element);
+		// Contour detection
+		std::vector<std::vector<cv::Point> > contours;
+		std::vector<cv::Vec4i> hierarchy;
+		cv::findContours(hsv, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
+		size_t largestContour = 0;
+		for (size_t i = 1; i < contours.size(); i++)
+		{
+			if (cv::contourArea(contours[i]) > cv::contourArea(contours[largestContour]))
+				largestContour = i;
+		}
+		cv::drawContours(frame, contours, largestContour, cv::Scalar(0, 0, 255), 1);
+		// Convex hull
+		if (!contours.empty())
+		{
+			std::vector<std::vector<cv::Point> > hull(1);
+			cv::convexHull(cv::Mat(contours[largestContour]), hull[0], false);
+			cv::drawContours(frame, hull, 0, cv::Scalar(0, 255, 0), 3);
+			if (hull[0].size() > 2)
+			{
+				std::vector<int> hullIndexes;
+				cv::convexHull(cv::Mat(contours[largestContour]), hullIndexes, true);
+				std::vector<cv::Vec4i> convexityDefects;
+				cv::convexityDefects(cv::Mat(contours[largestContour]), hullIndexes, convexityDefects);
+				cv::Rect boundingBox = cv::boundingRect(hull[0]);
+				cv::rectangle(frame, boundingBox, cv::Scalar(255, 0, 0));
+				cv::Point center = cv::Point(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
+				std::vector<cv::Point> validPoints;
+				for (size_t i = 0; i < convexityDefects.size(); i++)
+				{
+					cv::Point p1 = contours[largestContour][convexityDefects[i][0]];
+					cv::Point p2 = contours[largestContour][convexityDefects[i][1]];
+					cv::Point p3 = contours[largestContour][convexityDefects[i][2]];
+					double angle = std::atan2(center.y - p1.y, center.x - p1.x) * 180 / CV_PI;
+					double inAngle = innerAngle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+					double length = std::sqrt(std::pow(p1.x - p3.x, 2) + std::pow(p1.y - p3.y, 2));
+					if (angle > angleMin - 180 && angle < angleMax - 180 && inAngle > inAngleMin - 180 && inAngle < inAngleMax - 180 && length > lengthMin / 100.0 * boundingBox.height && length < lengthMax / 100.0 * boundingBox.height)
+					{
+						validPoints.push_back(p1);
+					}
+				}
+				for (size_t i = 0; i < validPoints.size(); i++)
+				{
+					cv::circle(frame, validPoints[i], 9, cv::Scalar(0, 255, 0), 2);
+				}
+				std::cout << "amount off fingies: " << validPoints.size()+1 << std::endl;
+			}
+		}
+		cv::imshow(windowName, frame);
+		if (cv::waitKey(30) >= 0) break;
 	}
-
 	return 0;
 }
 
-void track(int, void*) {
-	int count = 0;
-	char a[40];
-	vector<vector<Point> > contours;
-	vector<Vec4i> hierarchy;
-	//threshold(fgMaskMOG2, or2, thresh, maxVal, type);
-	//GaussianBlur(fgMaskMOG2, fgMaskMOG2, Size(11, 11), 3.5, 3.5);
-	//threshold(fgMaskMOG2, or2, 10, 255, THRESH_OTSU);
-	GaussianBlur(fgMaskMOG2, fgMaskMOG2, Size(27, 27), 3.5, 3.5);
-	threshold(fgMaskMOG2, fgMaskMOG2, thresh, maxVal, type); //THRESH_BINARY + THRESH_OTSU
-	//Canny(or2, kenarlar, deger, deger * 2, 3);
-	Canny(fgMaskMOG2, kenarlar, deger, deger * 2, 3); //OR2
-	findContours(fgMaskMOG2, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0)); //OR2
-	Mat cizim = Mat::zeros(kenarlar.size(), CV_8UC3); //kenarlar.size() or2.size()
-	if (contours.size() > 0) {
-		size_t indexOfBiggestContour = -1;
-		size_t sizeOfBiggestContour = 0;
-		for (size_t i = 0; i < contours.size(); i++) {
-			if (contours[i].size() > sizeOfBiggestContour) {
-				sizeOfBiggestContour = contours[i].size();
-				indexOfBiggestContour = i;
-			}
-		}
-		vector<vector<int> >hull(contours.size());
-		vector<vector<Point> >hullPoint(contours.size()); //elin hareketine göre eli çevreleyen çokgen	
-		vector<vector<Vec4i> > defects(contours.size()); //parmak uclarindaki yesil noktalar..multi dimensional matrix
-		vector<vector<Point> >defectPoint(contours.size()); //point olarak parmak ucu noktalarýný x,y olarak tutuyor
-		vector<vector<Point> >contours_poly(contours.size()); //eli çevreleyen hareketli dikdörtgen		
-		Point2f rect_point[4];
-		vector<RotatedRect>minRect(contours.size());
-		vector<Rect> boundRect(contours.size());
-		for (size_t i = 0; i < contours.size(); i++) {
-			if (contourArea(contours[i]) > 5000) {
-				convexHull(contours[i], hull[i], true);
-				convexityDefects(contours[i], hull[i], defects[i]);
-				if (indexOfBiggestContour == i) {
-					minRect[i] = minAreaRect(contours[i]);
-					for (size_t k = 0; k < hull[i].size(); k++) {
-						int ind = hull[i][k];
-						hullPoint[i].push_back(contours[i][ind]);
-					}
-					count = 0;
-
-					for (size_t k = 0; k < defects[i].size(); k++) {
-						if (defects[i][k][3] > 13 * 256) {
-							int p_start = defects[i][k][0];
-							int p_end = defects[i][k][1];
-							int p_far = defects[i][k][2];
-							defectPoint[i].push_back(contours[i][p_far]);
-							circle(griGoruntu, contours[i][p_end], 3, Scalar(0, 255, 0), 2); //i ydi
-							count++;
-						}
-
-					}
-
-					if (count == 1)
-						strcpy_s(a, "1");
-					else if (count == 2)
-						strcpy_s(a, "2");
-					else if (count == 3)
-						strcpy_s(a, "3");
-					else if (count == 4)
-						strcpy_s(a, "4");
-					else if (count == 5 || count == 6)
-						strcpy_s(a, "5");
-					else
-						strcpy_s(a, "EL GOSTER");
-
-					putText(aynali, a, Point(75, 450), FONT_HERSHEY_SIMPLEX, 3, Scalar(0, 255, 0), 3, 8, false);
-
-					drawContours(cizim, contours, i, Scalar(255, 255, 0), 2, 8, vector<Vec4i>(), 0, Point());
-					drawContours(cizim, hullPoint, i, Scalar(255, 255, 0), 1, 8, vector<Vec4i>(), 0, Point());
-					drawContours(griGoruntu, hullPoint, i, Scalar(0, 0, 255), 2, 8, vector<Vec4i>(), 0, Point());
-					approxPolyDP(contours[i], contours_poly[i], 3, false);
-					boundRect[i] = boundingRect(contours_poly[i]);
-					rectangle(griGoruntu, boundRect[i].tl(), boundRect[i].br(), Scalar(255, 0, 0), 2, 8, 0);
-					minRect[i].points(rect_point);
-					for (size_t k = 0; k < 4; k++) {
-						line(griGoruntu, rect_point[k], rect_point[(k + 1) % 4], Scalar(0, 255, 0), 2, 8);
-					}
-
-				}
-			}
-
-		}
-
-	}
-
-
-	imshow("Sonuc", cizim);
-
-}
