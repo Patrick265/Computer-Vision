@@ -8,6 +8,7 @@
 int minH = 0, maxH = 20, minS = 30, maxS = 150, minV = 60, maxV = 255;
 cv::Mat frame;
 int count = 0;
+std::vector<cv::Point> validPoints;
 
 float innerAngle(float px1, float py1, float px2, float py2, float cx1, float cy1)
 {
@@ -54,66 +55,15 @@ float innerAngle(float px1, float py1, float px2, float py2, float cx1, float cy
 	return A;
 }
 
-void CallbackFunc(int event, int x, int y, int flags, void* userdata)
-{
-	cv::Mat RGB = frame(cv::Rect(x, y, 1, 1));
-	cv::Mat HSV;
-	cv::cvtColor(RGB, HSV, cv::COLOR_BGR2HSV);
-	cv::Vec3b pixel = HSV.at<cv::Vec3b>(0, 0);
-	if (event == cv::EVENT_LBUTTONDBLCLK) // on double left clcik
-	{
-		std::cout << "Click" << std::endl;
-		int h = pixel.val[0];
-		int s = pixel.val[1];
-		int v = pixel.val[2];
-		if (count == 0)
-		{
-			minH = h;
-			maxH = h;
-			minS = s;
-			maxS = s;
-			minV = v;
-			maxV = v;
-		}
-		else
-		{
-			if (h < minH)
-			{
-				minH = h;
-			}
-			else if (h > maxH)
-			{
-				maxH = h;
-			}
-			if (s < minS)
-			{
-				minS = s;
-			}
-			else if (s > maxS)
-			{
-				maxS = s;
-			}
-			if (v < minV)
-			{
-				minV = v;
-			}
-			else if (v > maxV)
-			{
-				maxV = v;
-			}
 
-		}
-		count++;
-	}
-	std::cout << pixel << std::endl;
-}
 
 int main(int argc, char** argv)
 {
+	validPoints.clear();
+	//Initialisation
 	cv::VideoCapture cap(0);
 	const char* windowName = "Fingertip detection";
 	cv::namedWindow(windowName);
-	cv::setMouseCallback(windowName, CallbackFunc, NULL);
 	int inAngleMin = 200, inAngleMax = 300, angleMin = 180, angleMax = 359, lengthMin = 10, lengthMax = 80;
 	cv::createTrackbar("Inner angle min", windowName, &inAngleMin, 360);
 	cv::createTrackbar("Inner angle max", windowName, &inAngleMax, 360);
@@ -123,22 +73,27 @@ int main(int argc, char** argv)
 	cv::createTrackbar("Length max", windowName, &lengthMax, 100);
 	while (1)
 	{
+		// Getting an image
 		cap >> frame;
 		cv::Mat hsv;
 		cv::cvtColor(frame, hsv, cv::COLOR_BGR2HSV);
 		cv::inRange(hsv, cv::Scalar(minH, minS, minV), cv::Scalar(maxH, maxS, maxV), hsv);
+
 		// Pre processing
 		int blurSize = 5;
 		int elementSize = 5;
 		cv::medianBlur(hsv, hsv, blurSize);
 		cv::Mat element = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(2 * elementSize + 1, 2 * elementSize + 1), cv::Point(elementSize, elementSize));
 		cv::dilate(hsv, hsv, element);
+
 		// Contour detection
 		std::vector<std::vector<cv::Point> > contours;
 		std::vector<cv::Vec4i> hierarchy;
 		cv::findContours(hsv, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
 		size_t largestContour = 0;
 		size_t secondContour = 0;
+
+		// Finding largest 2 contours
 		for (size_t i = 1; i < contours.size(); i++)
 		{
 			if (cv::contourArea(contours[i]) > cv::contourArea(contours[secondContour])) {
@@ -148,25 +103,26 @@ int main(int argc, char** argv)
 			}
 		}
 		std::cout << "largest: " << largestContour << " second: " << secondContour << std::endl;
-		cv::drawContours(frame, contours, largestContour, cv::Scalar(0, 0, 255), 1);
-		cv::drawContours(frame, contours, secondContour, cv::Scalar(0, 0, 255), 1);
+
 		// Convex hull
 		if (!contours.empty())
 		{
 			std::vector<std::vector<cv::Point> > hull(1);
 			cv::convexHull(cv::Mat(contours[largestContour]), hull[0], false);
-			cv::drawContours(frame, hull, 0, cv::Scalar(0, 255, 0), 3);
-			//std::cout << "hull size: " << hull.size() << std::endl;
+
+			// Checking size of convex hull
 			if (hull[0].size() > 2)
 			{
 				std::vector<int> hullIndexes;
 				cv::convexHull(cv::Mat(contours[largestContour]), hullIndexes, true);
 				std::vector<cv::Vec4i> convexityDefects;
+
+				// Getting convexity defects
 				cv::convexityDefects(cv::Mat(contours[largestContour]), hullIndexes, convexityDefects);
 				cv::Rect boundingBox = cv::boundingRect(hull[0]);
-				cv::rectangle(frame, boundingBox, cv::Scalar(255, 0, 0));
 				cv::Point center = cv::Point(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
-				std::vector<cv::Point> validPoints;
+
+				// Checking angle for suitable match
 				for (size_t i = 0; i < convexityDefects.size(); i++)
 				{
 					cv::Point p1 = contours[largestContour][convexityDefects[i][0]];
@@ -176,31 +132,31 @@ int main(int argc, char** argv)
 					double inAngle = innerAngle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
 					double length = std::sqrt(std::pow(p1.x - p3.x, 2) + std::pow(p1.y - p3.y, 2));
 					if (angle > angleMin - 180 && angle < angleMax - 180 && inAngle > inAngleMin - 180 && inAngle < inAngleMax - 180 && length > lengthMin / 100.0 * boundingBox.height && length < lengthMax / 100.0 * boundingBox.height)
-					{
+					{	
+						// Adding suitable match to vector
 						validPoints.push_back(p1);
 					}
 				}
-				for (size_t i = 0; i < validPoints.size(); i++)
-				{
-					cv::circle(frame, validPoints[i], 9, cv::Scalar(0, 255, 0), 2);
-				}
-				//std::cout << "amount off fingies handie onie: " << validPoints.size() << std::endl;
 			}
 
+			// Convex hull
 			std::vector<std::vector<cv::Point> > hullSec(1);
 			cv::convexHull(cv::Mat(contours[secondContour]), hullSec[0], false);
-			cv::drawContours(frame, hullSec, 0, cv::Scalar(0, 255, 0), 3);
-			//std::cout << "hull size: " << hullSec.size() << std::endl;
+
+			// Checking size of convex hull
 			if (hullSec[0].size() > 2)
 			{
 				std::vector<int> hullIndexes;
 				cv::convexHull(cv::Mat(contours[secondContour]), hullIndexes, true);
 				std::vector<cv::Vec4i> convexityDefects;
+
+				// Getting convexity defects
 				cv::convexityDefects(cv::Mat(contours[secondContour]), hullIndexes, convexityDefects);
 				cv::Rect boundingBox = cv::boundingRect(hullSec[0]);
-				cv::rectangle(frame, boundingBox, cv::Scalar(255, 0, 0));
 				cv::Point center = cv::Point(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
-				std::vector<cv::Point> validPoints;
+				
+
+				// Checking angle for suitable match
 				for (size_t i = 0; i < convexityDefects.size(); i++)
 				{
 					cv::Point p1 = contours[secondContour][convexityDefects[i][0]];
@@ -209,18 +165,17 @@ int main(int argc, char** argv)
 					double angle = std::atan2(center.y - p1.y, center.x - p1.x) * 180 / CV_PI;
 					double inAngle = innerAngle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
 					double length = std::sqrt(std::pow(p1.x - p3.x, 2) + std::pow(p1.y - p3.y, 2));
-					if (angle > angleMin - 180 && angle < angleMax - 180 && inAngle > inAngleMin - 180 && inAngle < inAngleMax - 180 && length > lengthMin / 100.0 * boundingBox.height && length < lengthMax / 100.0 * boundingBox.height)
+					if (angle > angleMin - 180 && angle < angleMax - 180 && inAngle > inAngleMin - 180 
+						&& inAngle < inAngleMax - 180 && length > lengthMin / 100.0 * boundingBox.height 
+						&& length < lengthMax / 100.0 * boundingBox.height)
 					{
+						// Adding suitable match to vector
 						validPoints.push_back(p1);
 					}
 				}
-				for (size_t i = 0; i < validPoints.size(); i++)
-				{
-					cv::circle(frame, validPoints[i], 9, cv::Scalar(0, 255, 0), 2);
-				}
-				//std::cout << "amount off fingies handie secondie: " << validPoints.size() << std::endl;
 			}
 		}
+		cv::putText(frame, "5"/*std::string{ char(validPoints.size()) }*/, cv::Point(25, 75), cv::FONT_HERSHEY_PLAIN, 6, cv::Scalar(0, 255, 0), 2);
 		cv::imshow(windowName, frame);
 		if (cv::waitKey(30) >= 0) break;
 	}
